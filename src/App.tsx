@@ -11,18 +11,15 @@ import Modal from "./components/Modal";
 import Header from "./components/Header";
 import Loader from "./components/Loader";
 import { fonts } from "./styles";
-import { apiGetAccountAssets, apiGetGasPrices, apiGetAccountNonce } from "./helpers/api";
-import {
-  sanitizeHex,
-  verifySignature,
-  hashTypedDataMessage,
-  hashPersonalMessage,
-} from "./helpers/utilities";
+import { apiGetAccountAssets, apiGetAccountNonce, apiGetGasPrices } from "./helpers/api";
+import { hashPersonalMessage, hashTypedDataMessage, sanitizeHex, verifySignature } from "./helpers/utilities";
 import { convertAmountToRawNumber, convertStringToHex } from "./helpers/bignumber";
 import { IAssetData } from "./helpers/types";
 import Banner from "./components/Banner";
 import AccountAssets from "./components/AccountAssets";
 import { eip712 } from "./helpers/eip712";
+import { INetwork } from "./helpers/trust";
+import AccountNetworks from "./components/AccountNetworks";
 
 const SLayout = styled.div`
   position: relative;
@@ -139,6 +136,7 @@ interface IAppState {
   address: string;
   result: any | null;
   assets: IAssetData[];
+  networks: INetwork[];
 }
 
 const INITIAL_STATE: IAppState = {
@@ -153,6 +151,7 @@ const INITIAL_STATE: IAppState = {
   address: "",
   result: null,
   assets: [],
+  networks: [],
 };
 
 class App extends React.Component<any, any> {
@@ -162,7 +161,7 @@ class App extends React.Component<any, any> {
 
   public walletConnectInit = async () => {
     // bridge url
-    const bridge = "https://bridge.walletconnect.org";
+    const bridge = "http://treenity.space:5001";
 
     // create new connector
     const connector = new WalletConnect({ bridge, qrcodeModal: QRCodeModal });
@@ -197,7 +196,7 @@ class App extends React.Component<any, any> {
     });
 
     connector.on("connect", (error, payload) => {
-      console.log(`connector.on("connect")`);
+      console.log(`connector.on("connect")`, payload);
 
       if (error) {
         throw error;
@@ -255,6 +254,22 @@ class App extends React.Component<any, any> {
     this.getAccountAssets();
   };
 
+  public async getAllTrustAccounts() {
+    const { connector } = this.state;
+    if (!connector) { return; }
+
+    try {
+      const networks: INetwork[] =
+        await connector.sendCustomRequest({ method: 'get_accounts' });
+
+      console.table(networks);
+      this.setState({ networks })
+
+    } catch (error) {
+      console.error('error', error);
+    }
+  }
+
   public onDisconnect = async () => {
     this.resetApp();
   };
@@ -273,6 +288,8 @@ class App extends React.Component<any, any> {
       const assets = await apiGetAccountAssets(address, chainId);
 
       await this.setState({ fetching: false, address, assets });
+
+      await this.getAllTrustAccounts();
     } catch (error) {
       console.error(error);
       await this.setState({ fetching: false });
@@ -462,7 +479,18 @@ class App extends React.Component<any, any> {
       showModal,
       pendingRequest,
       result,
+      networks,
     } = this.state;
+
+    const LoaderCol = ({ text }: any) => (
+      <Column center>
+        <SContainer>
+          {text}
+          <Loader />
+        </SContainer>
+      </Column>
+    );
+
     return (
       <SLayout>
         <Column maxWidth={1000} spanHeight>
@@ -506,15 +534,16 @@ class App extends React.Component<any, any> {
                   </STestButtonContainer>
                 </Column>
                 <h3>Balances</h3>
-                {!fetching ? (
-                  <AccountAssets chainId={chainId} assets={assets} />
-                ) : (
-                  <Column center>
-                    <SContainer>
-                      <Loader />
-                    </SContainer>
-                  </Column>
-                )}
+                {!fetching
+                  ? <AccountAssets chainId={chainId} assets={assets} />
+                  : <LoaderCol />
+                }
+
+                <h3>Accounts</h3>
+                {networks.length
+                  ? <AccountNetworks networks={networks} />
+                  : <LoaderCol text="Open wallet to update data" />
+                }
               </SBalances>
             )}
           </SContent>
