@@ -4,6 +4,7 @@ export interface ITrustCoin {
   id: string;
   coinId: number;
   name: string;
+  symbol: string;
   explorer: {
     url: string;
     accountPath: string;
@@ -16,6 +17,7 @@ trustCoins.forEach(coin => { coins[coin.coinId] = coin as ITrustCoin; });
 export interface INetwork {
   address: string;
   network: number;
+  coin: ITrustCoin;
 }
 
 function clone<T>(t: T): T {

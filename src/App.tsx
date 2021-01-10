@@ -18,8 +18,9 @@ import { IAssetData } from "./helpers/types";
 import Banner from "./components/Banner";
 import AccountAssets from "./components/AccountAssets";
 import { eip712 } from "./helpers/eip712";
-import { INetwork } from "./helpers/trust";
+import { findCoinByNetwork, INetwork } from "./helpers/trust";
 import AccountNetworks from "./components/AccountNetworks";
+import config from "./config";
 
 const SLayout = styled.div`
   position: relative;
@@ -161,7 +162,7 @@ class App extends React.Component<any, any> {
 
   public walletConnectInit = async () => {
     // bridge url
-    const bridge = "http://treenity.space:5001";
+    const bridge = config.bridge;
 
     // create new connector
     const connector = new WalletConnect({ bridge, qrcodeModal: QRCodeModal });
@@ -261,6 +262,8 @@ class App extends React.Component<any, any> {
     try {
       const networks: INetwork[] =
         await connector.sendCustomRequest({ method: 'get_accounts' });
+
+      networks.forEach(net => net.coin = findCoinByNetwork(net.network));
 
       console.table(networks);
       this.setState({ networks })

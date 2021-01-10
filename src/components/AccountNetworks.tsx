@@ -1,10 +1,13 @@
 import * as React from "react";
+import { useQuery } from "react-query";
 
 import Column from "./Column";
 import TrustIcon from "./TrustIcon";
 import { findCoinByNetwork, INetwork } from "../helpers/trust";
 import styled from "styled-components";
 import { ellipseAddress } from "../helpers/utilities";
+import { handleSignificantDecimals } from "../helpers/bignumber";
+import config from "../config";
 
 
 const SAssetRow = styled.div`
@@ -24,14 +27,31 @@ const SAssetName = styled.a`
 const SAssetRowRight = styled.div`
   display: flex;
 `;
-// const SAssetBalance = styled.div`
-//   display: flex;
-// `;
+const SAssetBalance = styled.div`
+  display: flex;
+`;
+
+function useBalance(address: string, coin: string): number|undefined {
+  const balanceUrl = `${config.balanceUrl}/${coin}/${address}`;
+  console.log(balanceUrl);
+  const { data: balance } = useQuery(
+    address,
+    () => fetch(balanceUrl).then(res => res.json())
+  );
+
+  if (balance) {
+    if (balance.address_type === "unknown") { return undefined; }
+    return balance.balances[coin] || 0;
+  }
+
+  return undefined;
+}
 
 
 const NetworkRow = ({ network, address }: INetwork) => {
   const asset = findCoinByNetwork(network);
   const explorerUrl = `${asset.explorer.url}${asset.explorer.accountPath}${address}`;
+  const balance = useBalance(address, asset.symbol);
 
   return (
     <SAssetRow>
@@ -41,11 +61,9 @@ const NetworkRow = ({ network, address }: INetwork) => {
       </SAssetRowLeft>
       <SAssetRowRight>
         <SAssetName href={explorerUrl} target="_blank">{ellipseAddress(address, 8)}</SAssetName>
-        {/*<SAssetBalance>*/}
-        {/*  {`${handleSignificantDecimals(convertAmountFromRawNumber(asset.balance), 8)} ${*/}
-        {/*    asset.symbol*/}
-        {/*  }`}*/}
-        {/*</SAssetBalance>*/}
+        <SAssetBalance>
+          {balance == null ? '-' : handleSignificantDecimals(balance.toString(), 8)} {/* ${asset.symbol}`}*/}
+        </SAssetBalance>
       </SAssetRowRight>
     </SAssetRow>
   );

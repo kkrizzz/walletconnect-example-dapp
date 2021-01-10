@@ -4,6 +4,7 @@ import { createGlobalStyle } from "styled-components";
 
 import App from "./App";
 import { globalStyle } from "./styles";
+import { QueryClient, QueryClientProvider } from "react-query";
 const GlobalStyle = createGlobalStyle`
   ${globalStyle}
 `;
@@ -15,10 +16,12 @@ declare global {
   }
 }
 
+const queryClient = new QueryClient()
+
 ReactDOM.render(
-  <>
+  <QueryClientProvider client={queryClient}>
     <GlobalStyle />
     <App />
-  </>,
+  </QueryClientProvider>,
   document.getElementById("root"),
 );
